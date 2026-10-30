@@ -1,0 +1,60 @@
+name: Despliegue de infraestructura AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  STACK_NAME: proyecto-web-iac
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # Solo si usan AWS Academy / Learner Lab (credenciales temporales):
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validar la plantilla
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://templates/template.yaml
+
+      - name: Limpiar stack fallido (si quedo en ROLLBACK_COMPLETE)
+        run: |
+          STATUS=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "NO_EXISTE")
+          echo "Estado actual del stack: $STATUS"
+          if [ "$STATUS" = "ROLLBACK_COMPLETE" ]; then
+            aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
+            aws cloudformation wait stack-delete-complete --stack-name ${{ env.STACK_NAME }}
+          fi
+
+      - name: Desplegar el stack de CloudFormation
+        run: |
+          aws cloudformation deploy \
+            --template-file templates/template.yaml \
+            --stack-name ${{ env.STACK_NAME }} \
+            --no-fail-on-empty-changeset
+
+      - name: Mostrar las salidas del stack (IP y URL)
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Outputs" \
+            --output table

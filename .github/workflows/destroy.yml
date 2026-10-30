@@ -1,0 +1,39 @@
+name: Eliminar infraestructura AWS
+
+# Solo se ejecuta a mano: pestaña Actions -> "Eliminar infraestructura AWS" -> Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribe ELIMINAR para borrar el stack y todos sus recursos'
+        required: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  STACK_NAME: proyecto-web-iac
+
+jobs:
+
+  destroy:
+
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event.inputs.confirmar == 'ELIMINAR' }}
+
+    steps:
+
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # Solo si usan AWS Academy / Learner Lab (credenciales temporales):
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Eliminar el stack de CloudFormation
+        run: |
+          echo "Eliminando el stack ${{ env.STACK_NAME }} (EC2 + Security Group)..."
+          aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
+          aws cloudformation wait stack-delete-complete --stack-name ${{ env.STACK_NAME }}
+          echo "Stack eliminado. Ya no quedan recursos del taller activos."
