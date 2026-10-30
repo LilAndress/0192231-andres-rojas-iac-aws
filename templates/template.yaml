@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 con Apache creada desde GitHub Actions y CloudFormation
+
+Parameters:
+  InstanceDescription:
+    Description: Texto principal que se mostrara en la pagina web
+    Type: String
+    Default: Servidor Web Apache
+
+  SecurityGroupDescription:
+    Description: Descripcion del Security Group
+    Type: String
+    Default: Acceso HTTP al servidor
+
+  LatestAmiId:
+    Description: AMI mas reciente de Amazon Linux 2023 (se consulta automaticamente)
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+
+  # Para recrear la instancia (y que User Data vuelva a correr) cambia este nombre,
+  # por ejemplo a MyInstanceClaseV2, y actualizalo tambien en los Outputs.
+
+  MyInstanceClase:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      SecurityGroups:
+        - !Ref ServerSecurityGroupClase
+      Tags:
+        - Key: Name
+          Value: EC2-Clase-CF
+        - Key: Proyecto
+          Value: Class-CloudFormation
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          # ---- Personaliza el HTML de aqui hacia abajo (hasta EOF) ----
+          cat > /var/www/html/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>TU NOMBRE | IaC AWS</title>
+            <style>
+              * { box-sizing: border-box; }
+              body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif;
+                     background: linear-gradient(135deg, #0b1d33, #12395c);
+                     color: #e6edf5; min-height: 100vh; display: flex;
+                     align-items: center; justify-content: center; padding: 24px; }
+              .card { background: rgba(255,255,255,0.06); border: 1px solid #2f5d85;
+                      border-radius: 16px; padding: 32px 40px; max-width: 640px; }
+              .tag { display: inline-block; background: #ff9900; color: #111;
+                     font-weight: 700; font-size: 12px; padding: 4px 10px;
+                     border-radius: 20px; letter-spacing: 1px; }
+              h1 { color: #ffb84d; margin: 16px 0 4px; }
+              h2 { font-weight: 400; color: #9cc3e6; margin: 0 0 20px; font-size: 18px; }
+              ul { padding-left: 20px; line-height: 1.7; }
+              a { color: #ffb84d; }
+              footer { margin-top: 20px; font-size: 13px; color: #8aa4bd; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <span class="tag">CLOUD COMPUTING · UFPSO</span>
+              <h1>${InstanceDescription} 👏</h1>
+              <h2>Hola desde CloudFormation con GitHub 🚀</h2>
+              <p><strong>TU NOMBRE COMPLETO</strong> · Código TU_CODIGO<br>
+                 Ingeniería de Sistemas · Universidad Francisco de Paula Santander Ocaña</p>
+              <p>Esta página fue publicada sin entrar al servidor: el repositorio en GitHub
+                 describe la infraestructura y GitHub Actions la crea en AWS.</p>
+              <ul>
+                <li>Infraestructura: AWS CloudFormation</li>
+                <li>Automatización: GitHub Actions</li>
+                <li>Servidor: EC2 t3.micro con Apache</li>
+              </ul>
+              <p><a href="https://github.com/TU_USUARIO/TU_REPOSITORIO">Ver el repositorio del proyecto</a></p>
+              <footer>Docente: Wilder Andrés Duarte Neira</footer>
+            </div>
+          </body>
+          </html>
+          EOF
+
+  ServerSecurityGroupClase:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Ref SecurityGroupDescription
+      Tags:
+        - Key: Name
+          Value: SG-HTTP-Clase-CF
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+
+  InstanceId:
+    Description: ID de la instancia EC2
+    Value: !Ref MyInstanceClase
+
+  PublicIP:
+    Description: IP publica de la instancia
+    Value: !GetAtt MyInstanceClase.PublicIp
+
+  WebsiteURL:
+    Description: URL para abrir la pagina web
+    Value: !Sub http://${MyInstanceClase.PublicIp}
