@@ -72,7 +72,7 @@ Resources:
               <span class="tag">CLOUD COMPUTING · UFPSO</span>
               <h1>${InstanceDescription} 👏</h1>
               <h2>Hola desde CloudFormation con GitHub 🚀</h2>
-              <p><strong>TU NOMBRE COMPLETO</strong> · Código TU_CODIGO<br>
+              <p><strong>Andres Felipe Rojas Cañizarez</strong> · Código 0192231<br>
                  Ingeniería de Sistemas · Universidad Francisco de Paula Santander Ocaña</p>
               <p>Esta página fue publicada sin entrar al servidor: el repositorio en GitHub
                  describe la infraestructura y GitHub Actions la crea en AWS.</p>
@@ -81,7 +81,7 @@ Resources:
                 <li>Automatización: GitHub Actions</li>
                 <li>Servidor: EC2 t3.micro con Apache</li>
               </ul>
-              <p><a href="https://github.com/TU_USUARIO/TU_REPOSITORIO">Ver el repositorio del proyecto</a></p>
+              <p><a href="https://github.com/LilAndress/0192231-andres-rojas-iac-aws.git">Ver el repositorio del proyecto</a></p>
               <footer>Docente: Wilder Andrés Duarte Neira</footer>
             </div>
           </body>
