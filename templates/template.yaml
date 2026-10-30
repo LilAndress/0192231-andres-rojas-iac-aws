@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infraestructura base del taller (EC2 + Security Group + pagina web)
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: Tipo de instancia EC2 para el taller
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: AMI de Amazon Linux administrada por AWS
+
+Resources:
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permitir trafico HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  MyInstanceClase:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+      Tags:
+        - Key: Name
+          Value: EC2-Clase-CF
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl enable httpd
+          systemctl start httpd
+          cat > /var/www/html/index.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Proyecto IaC AWS</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 2rem; }
+              h1 { color: #0f172a; }
+            </style>
+          </head>
+          <body>
+            <h1>Despliegue exitoso con CloudFormation</h1>
+            <p>Infraestructura creada desde GitHub Actions.</p>
+          </body>
+          </html>
+          HTML
+
+Outputs:
+  InstanceId:
+    Description: ID de la instancia EC2
+    Value: !Ref MyInstanceClase
+
+  PublicIP:
+    Description: Direccion IP publica de la instancia
+    Value: !GetAtt MyInstanceClase.PublicIp
+
+  WebsiteURL:
+    Description: URL del sitio web desplegado
+    Value: !Sub http://${MyInstanceClase.PublicIp}
